@@ -9,6 +9,10 @@
 #define REGLO_CPF_H
 
 #include <Stream.h>
+#include <stdarg.h>
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
 
 /**
  * Return codes for pump control commands.
@@ -78,7 +82,7 @@ public:
 
     int  enable_control_panel();
 
-    int get_flow_rate();
+    String get_flow_rate();
 
 
 };
