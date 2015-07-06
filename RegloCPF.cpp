@@ -13,8 +13,13 @@
 // Command requests.
 const char* REQUEST_START = "%dH\r";
 const char* REQUEST_STOP = "%dI\r";
+const char* REQUEST_DISABLE_CONTROL_PANEL = "%dB\r";
+const char* REQUEST_ENABLE_CONTROL_PANEL = "%dA\r";
 const char* REQUEST_CLOCKWISE = "%dJ\r";
 const char* REQUEST_COUNTER_CLOCKWISE = "%dK\r";
+const char* REQUEST_GET_FLOW_RATE = "%df\r";
+
+
 
 // Buffer size for command formatting.
 const int BUFFER_SIZE = 16;
@@ -47,6 +52,16 @@ int RegloCPF::stop()
     REQUEST_AND_CONFIRM(REQUEST_STOP, _address);
 }
 
+int RegloCPF::disable_control_panel()
+{
+    REQUEST_AND_CONFIRM(REQUEST_DISABLE_CONTROL_PANEL, _address);
+}
+
+int RegloCPF::enable_control_panel()
+{
+    REQUEST_AND_CONFIRM(REQUEST_ENABLE_CONTROL_PANEL, _address);
+}
+
 int RegloCPF::clockwise()
 {
     REQUEST_AND_CONFIRM(REQUEST_CLOCKWISE, _address);
@@ -56,6 +71,14 @@ int RegloCPF::counterClockwise()
 {
     REQUEST_AND_CONFIRM(REQUEST_COUNTER_CLOCKWISE, _address);
 }
+
+
+int RegloCPF::get_flow_rate(){
+	   REQUEST_AND_CONFIRM(REQUEST_GET_FLOW_RATE, _address);
+
+}
+
+
 
 int RegloCPF::request(const char* command, ...)
 {
@@ -79,7 +102,14 @@ int RegloCPF::request(const char* command, ...)
 
 int RegloCPF::confirm()
 {
+
+
+
+
+
+
     char response = _stream->read();
+
 
     switch (response) {
         case RESPONSE_OK:

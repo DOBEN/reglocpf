@@ -45,6 +45,7 @@ class RegloCPF {
 
 public:
 
+
     /**
      * Construct a new RegloCPF controller.
      *
@@ -72,6 +73,13 @@ public:
      * Set revolution in counter-clockwise direction.
      */
     int counterClockwise();
+
+    int disable_control_panel();
+
+    int  enable_control_panel();
+
+    int get_flow_rate();
+
 
 };
 
