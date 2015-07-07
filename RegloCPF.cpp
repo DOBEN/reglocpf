@@ -15,6 +15,7 @@ const char* REQUEST_ENABLE_CONTROL_PANEL = "%dA\r";
 const char* REQUEST_CLOCKWISE = "%dJ\r";
 const char* REQUEST_COUNTER_CLOCKWISE = "%dK\r";
 const char* REQUEST_GET_FLOW_RATE = "%df\r";
+const char* REQUEST_SET_FLOW_RATE = "%df%d%d%d%d%c%d\r";
 
 // Buffer size for command formatting.
 const int BUFFER_SIZE = 16;
@@ -67,6 +68,48 @@ String RegloCPF::get_flow_rate() {
 	}
 	String response = _stream->readString();
 	return response;
+}
+
+String RegloCPF::set_flow_rate(int mantisse, int exponent) {
+
+	if (exponent > 9 || exponent < -9) {
+		return "REGLO_OUT_OF_RANGE";
+	}
+
+	if (mantisse > 9999 || mantisse < 0) {
+		return "REGLO_OUT_OF_RANGE";
+	}
+
+	int thousand = mantisse / (int) 1000;
+	mantisse = mantisse % 1000;
+	int hundred = mantisse / (int) 100;
+	mantisse = mantisse % 100;
+	int teens = mantisse / (int) 10;
+	mantisse = mantisse % 10;
+	int ones = mantisse;
+
+	char exponent_prefix = (exponent >= 0) ? '+' : '-';
+
+	int __request_code = request(REQUEST_SET_FLOW_RATE, _address, thousand,
+			hundred, teens, ones, exponent_prefix, abs(exponent));
+	if (__request_code != REGLO_OK) {
+		return "REGLO_INTERNAL_ERROR";
+	}
+
+	String response = _stream->readString();
+	if (response[0] == RESPONSE_ERROR)
+		return "REGLO_ERROR";
+
+	String compare = String(thousand) + String(hundred) + String(teens)
+			+ String(ones) + 'E' + exponent_prefix + abs(exponent) + "\r\n";
+	if (compare != response)
+		return "REGLO_BAD_RESPONSE or value too big or too small for the pump";
+
+	//pump will set the highest or lowest possible value and therefore compare != response;
+	//max value in datasheet was 180ml/min; min value in datasheet was 0.08ml/min; but depending on the hubvolume of the pump this can change
+
+	return response;
+
 }
 
 int RegloCPF::request(const char* command, ...) {
