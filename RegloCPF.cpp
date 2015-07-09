@@ -15,7 +15,7 @@ const char* REQUEST_ENABLE_CONTROL_PANEL = "%dA\r";
 const char* REQUEST_CLOCKWISE = "%dJ\r";
 const char* REQUEST_COUNTER_CLOCKWISE = "%dK\r";
 const char* REQUEST_GET_FLOW_RATE = "%df\r";
-const char* REQUEST_SET_FLOW_RATE = "%df%d%d%d%d%c%d\r";
+const char* REQUEST_SET_FLOW_RATE = "%df%.4d%c%.1d\r";
 
 // Buffer size for command formatting.
 const int BUFFER_SIZE = 16;
@@ -70,45 +70,63 @@ String RegloCPF::get_flow_rate() {
 	return response;
 }
 
-String RegloCPF::set_flow_rate(int mantisse, int exponent) {
+int RegloCPF::set_flow_rate(int* mantisse, int* exponent) {
 
-	if (exponent > 9 || exponent < -9) {
-		return "REGLO_OUT_OF_RANGE";
+	int mantisse_new = 0;
+	int exponent_new = 0;
+	char input[7] = { -1, -1, -1, -1, -1, -1, -1 };
+
+	if (*exponent > 9 || *exponent < -9) {
+		return REGLO_OUT_OF_RANGE;
 	}
 
-	if (mantisse > 9999 || mantisse < 0) {
-		return "REGLO_OUT_OF_RANGE";
+	if (*mantisse > 9999 || *mantisse < 0) {
+		return REGLO_OUT_OF_RANGE;
 	}
 
-	int thousand = mantisse / (int) 1000;
-	mantisse = mantisse % 1000;
-	int hundred = mantisse / (int) 100;
-	mantisse = mantisse % 100;
-	int teens = mantisse / (int) 10;
-	mantisse = mantisse % 10;
-	int ones = mantisse;
+	char exponent_prefix = (*exponent >= 0) ? '+' : '-';
 
-	char exponent_prefix = (exponent >= 0) ? '+' : '-';
-
-	int __request_code = request(REQUEST_SET_FLOW_RATE, _address, thousand,
-			hundred, teens, ones, exponent_prefix, abs(exponent));
+	int __request_code = request(REQUEST_SET_FLOW_RATE, _address, *mantisse,
+			exponent_prefix, abs(*exponent));
 	if (__request_code != REGLO_OK) {
-		return "REGLO_INTERNAL_ERROR";
+		return REGLO_INTERNAL_ERROR;
 	}
 
-	String response = _stream->readString();
-	if (response[0] == RESPONSE_ERROR)
-		return "REGLO_ERROR";
+	while (input[0] == -1) {  // stream not available
+		input[0] = _stream->read();
+	}
 
-	String compare = String(thousand) + String(hundred) + String(teens)
-			+ String(ones) + 'E' + exponent_prefix + abs(exponent) + "\r\n";
-	if (compare != response)
-		return "REGLO_BAD_RESPONSE or value too big or too small for the pump";
+	if (*input == '#') {
+		return REGLO_ERROR;
+	}
 
-	//pump will set the highest or lowest possible value and therefore compare != response;
-	//max value in datasheet was 180ml/min; min value in datasheet was 0.08ml/min; but depending on the hubvolume of the pump this can change
+	int i = 1;
+	while (i < 7) {
+		while (input[i] == -1) {   // stream not available
+			input[i] = _stream->read();
+		}
+		i++;
+	}
 
-	return response;
+	sscanf(input, "%dE%d\r\n", &mantisse_new, &exponent_new);
+
+	return  pow(10, exponent_new);
+
+	if (mantisse_new * pow(10, exponent_new)
+			!= *mantisse * pow(10, *exponent)) {
+		*mantisse = mantisse_new; //return the actual flow rate value of the pump, even if the user requests a too high or too low value
+		*exponent = exponent_new;
+
+		return REGLO_BAD_RESPONSE; //REGLO_BAD_RESPONSE or value too big or too small for the pump
+		//pump will set the highest or lowest possible value and therefore compare != response;
+		//max value in datasheet was 180ml/min; min value in datasheet was 0.08ml/min; but depending on the hubvolume of the pump this can change
+// max value manuell test 36 ml/min      min  0.8 ml/min
+	}
+
+	*mantisse = mantisse_new;
+	*exponent = exponent_new;
+
+	return REGLO_OK;
 
 }
 
@@ -116,17 +134,17 @@ int RegloCPF::request(const char* command, ...) {
 	va_list args;
 	char buffer[BUFFER_SIZE];
 
-	// Format the command from the variadic argument list.
+// Format the command from the variadic argument list.
 	va_start(args, command);
 	int result = vsnprintf(buffer, BUFFER_SIZE, command, args);
 	va_end(args);
 
-	// If the command was malformed or could not fit in the buffer, fail fast.
+// If the command was malformed or could not fit in the buffer, fail fast.
 	if (result == -1 || result >= BUFFER_SIZE) {
 		return REGLO_INTERNAL_ERROR;
 	}
 
-	// Send the command to the pump.
+// Send the command to the pump.
 	_stream->print(buffer);
 	return REGLO_OK;
 }

@@ -13,6 +13,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <math.h>
 
 /**
  * Return codes for pump control commands.
@@ -77,6 +78,7 @@ public:
 	 */
 	int counterClockwise();
 
+
 	/**
 	 * Set control panel inactive.
 	 */
@@ -95,7 +97,7 @@ public:
 	/**
 	 * Set flow rate in ml per minute; first value is Mantisse; second value is Exponent e.g. -2 or 7
 	 */
-	String set_flow_rate(int mantisse, int exponent);
+	int set_flow_rate(int* mantisse, int* exponent);
 
 };
 
