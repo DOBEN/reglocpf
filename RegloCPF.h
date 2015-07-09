@@ -48,6 +48,10 @@ class RegloCPF {
 	 */
 	int confirm();
 
+
+	int read_float_from_pump( int* mantisse, int* exponent);
+	int read_float_and_confirm(int* mantisse, int* exponent);
+
 public:
 
 	/**
@@ -92,7 +96,7 @@ public:
 	/**
 	 * Flow rate in ml per minute
 	 */
-	String get_flow_rate();
+	int get_flow_rate(int* mantisse, int* exponent);
 
 	/**
 	 * Set flow rate in ml per minute; first value is Mantisse; second value is Exponent e.g. -2 or 7

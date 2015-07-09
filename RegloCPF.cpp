@@ -61,20 +61,16 @@ int RegloCPF::counterClockwise() {
 	REQUEST_AND_CONFIRM(REQUEST_COUNTER_CLOCKWISE, _address);
 }
 
-String RegloCPF::get_flow_rate() {
+int RegloCPF::get_flow_rate(int* mantisse, int* exponent) {
 	int __request_code = request(REQUEST_GET_FLOW_RATE, _address);
 	if (__request_code != REGLO_OK) {
-		return "REGLO_INTERNAL_ERROR";
+		return REGLO_INTERNAL_ERROR;
 	}
-	String response = _stream->readString();
-	return response;
+
+	return read_float_from_pump(mantisse, exponent);
 }
 
 int RegloCPF::set_flow_rate(int* mantisse, int* exponent) {
-
-	int mantisse_new = 0;
-	int exponent_new = 0;
-	char input[7] = { -1, -1, -1, -1, -1, -1, -1 };
 
 	if (*exponent > 9 || *exponent < -9) {
 		return REGLO_OUT_OF_RANGE;
@@ -91,7 +87,10 @@ int RegloCPF::set_flow_rate(int* mantisse, int* exponent) {
 	if (__request_code != REGLO_OK) {
 		return REGLO_INTERNAL_ERROR;
 	}
-
+	return read_float_and_confirm(mantisse, exponent);
+}
+int RegloCPF::read_float_from_pump(int* mantisse, int* exponent) {
+	char input[9] = { -1, -1, -1, -1, -1, -1, -1,-1,-1 };
 	while (input[0] == -1) {  // stream not available
 		input[0] = _stream->read();
 	}
@@ -101,27 +100,39 @@ int RegloCPF::set_flow_rate(int* mantisse, int* exponent) {
 	}
 
 	int i = 1;
-	while (i < 7) {
+	while (i < 9) {
 		while (input[i] == -1) {   // stream not available
 			input[i] = _stream->read();
 		}
 		i++;
 	}
 
-	sscanf(input, "%dE%d\r\n", &mantisse_new, &exponent_new);
+	sscanf(input, "%dE%d\r\n", mantisse, exponent);
+
+	return REGLO_OK;
+
+}
+
+int RegloCPF::read_float_and_confirm(int* mantisse, int* exponent) {
+	int mantisse_new = 0;
+	int exponent_new = 0;
+	int error = read_float_from_pump(&mantisse_new, &exponent_new);
+	if (error != REGLO_OK) {
+		return error;
+	}
 
 	double values = mantisse_new * pow(10, exponent_new);
 	double old = *mantisse * pow(10, *exponent);
 	*mantisse = mantisse_new;
 	*exponent = exponent_new;
 
-	if (round(values * 10000) == round(old * 10000)) {// rounding due to floating point precision and possible inaccuracy of pump response
+	if (round(values * 10000) == round(old * 10000)) { // rounding due to floating point precision and possible inaccuracy of pump response
 		return REGLO_OK;
 	} else {
 		return REGLO_BAD_RESPONSE; //REGLO_BAD_RESPONSE or value too big or too small for the pump
-		//pump will set the highest or lowest possible value and therefore compare != response;
-		//max value in datasheet was 180ml/min; min value in datasheet was 0.08ml/min; but depending on the hubvolume of the pump this can change
-// max value manuell test 36 ml/min      min  0.8 ml/min
+		//pump will set the highest or lowest possible value and therefore values!= old;
+		//max flow rate value in datasheet was 180ml/min; min flow rate value in datasheet was 0.08ml/min; but depending on the hubvolume of the pump this can change
+		//max flow rate value of our pump was 36 ml/min (manual test),  min flow rate value 0.8 ml/min, respectivily
 	}
 }
 
