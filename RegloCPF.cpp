@@ -110,24 +110,19 @@ int RegloCPF::set_flow_rate(int* mantisse, int* exponent) {
 
 	sscanf(input, "%dE%d\r\n", &mantisse_new, &exponent_new);
 
-	return  pow(10, exponent_new);
+	double values = mantisse_new * pow(10, exponent_new);
+	double old = *mantisse * pow(10, *exponent);
+	*mantisse = mantisse_new;
+	*exponent = exponent_new;
 
-	if (mantisse_new * pow(10, exponent_new)
-			!= *mantisse * pow(10, *exponent)) {
-		*mantisse = mantisse_new; //return the actual flow rate value of the pump, even if the user requests a too high or too low value
-		*exponent = exponent_new;
-
+	if (round(values * 10000) == round(old * 10000)) {// rounding due to floating point precision and possible inaccuracy of pump response
+		return REGLO_OK;
+	} else {
 		return REGLO_BAD_RESPONSE; //REGLO_BAD_RESPONSE or value too big or too small for the pump
 		//pump will set the highest or lowest possible value and therefore compare != response;
 		//max value in datasheet was 180ml/min; min value in datasheet was 0.08ml/min; but depending on the hubvolume of the pump this can change
 // max value manuell test 36 ml/min      min  0.8 ml/min
 	}
-
-	*mantisse = mantisse_new;
-	*exponent = exponent_new;
-
-	return REGLO_OK;
-
 }
 
 int RegloCPF::request(const char* command, ...) {
