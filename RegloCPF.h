@@ -103,6 +103,17 @@ public:
 	 */
 	int set_flow_rate(int* mantisse, int* exponent);
 
+
+
+	void clear_buffer();
+
+	/**
+		 * For debugging purposes.
+		 */
+	char read();
+
+
+
 };
 
 #endif

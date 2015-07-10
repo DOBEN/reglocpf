@@ -62,6 +62,8 @@ int RegloCPF::counterClockwise() {
 }
 
 int RegloCPF::get_flow_rate(int* mantisse, int* exponent) {
+	this->clear_buffer();
+
 	int __request_code = request(REQUEST_GET_FLOW_RATE, _address);
 	if (__request_code != REGLO_OK) {
 		return REGLO_INTERNAL_ERROR;
@@ -71,6 +73,7 @@ int RegloCPF::get_flow_rate(int* mantisse, int* exponent) {
 }
 
 int RegloCPF::set_flow_rate(int* mantisse, int* exponent) {
+	this->clear_buffer();
 
 	if (*exponent > 9 || *exponent < -9) {
 		return REGLO_OUT_OF_RANGE;
@@ -82,6 +85,11 @@ int RegloCPF::set_flow_rate(int* mantisse, int* exponent) {
 
 	char exponent_prefix = (*exponent >= 0) ? '+' : '-';
 
+	/*int buffer=-1;
+	 while (buffer!= -1) {  // leeren von buffer; wichtig weil später die antwort erwartet wird
+	 buffer = _stream->read();
+	 }*/
+
 	int __request_code = request(REQUEST_SET_FLOW_RATE, _address, *mantisse,
 			exponent_prefix, abs(*exponent));
 	if (__request_code != REGLO_OK) {
@@ -90,7 +98,7 @@ int RegloCPF::set_flow_rate(int* mantisse, int* exponent) {
 	return read_float_and_confirm(mantisse, exponent);
 }
 int RegloCPF::read_float_from_pump(int* mantisse, int* exponent) {
-	char input[9] = { -1, -1, -1, -1, -1, -1, -1,-1,-1 };
+	char input[9] = { -1, -1, -1, -1, -1, -1, -1, -1, -1 };
 	while (input[0] == -1) {  // stream not available
 		input[0] = _stream->read();
 	}
@@ -136,7 +144,6 @@ int RegloCPF::read_float_and_confirm(int* mantisse, int* exponent) {
 	}
 }
 
-
 int RegloCPF::request(const char* command, ...) {
 	va_list args;
 	char buffer[BUFFER_SIZE];
@@ -156,16 +163,31 @@ int RegloCPF::request(const char* command, ...) {
 	return REGLO_OK;
 }
 
+char RegloCPF::read() {
+	if (_stream->available()) {
+		return _stream->read();
+	}
+	return -1;
+}
+
+void RegloCPF::clear_buffer() {
+	while (_stream->read() != -1) {
+		_stream->read();
+	}
+}
+
 int RegloCPF::confirm() {
 	char response = _stream->read();
+
+	while (response == -1) {  // stream not available
+		response = _stream->read();
+	}
 
 	switch (response) {
 	case RESPONSE_OK:
 		return REGLO_OK;
 	case RESPONSE_ERROR:
 		return REGLO_ERROR;
-	case RESPONSE_TIMEOUT:
-		return REGLO_TIMEOUT;
 	default:
 		return REGLO_BAD_RESPONSE;
 	}
