@@ -136,6 +136,7 @@ int RegloCPF::read_float_and_confirm(int* mantisse, int* exponent) {
 	}
 }
 
+
 int RegloCPF::request(const char* command, ...) {
 	va_list args;
 	char buffer[BUFFER_SIZE];
