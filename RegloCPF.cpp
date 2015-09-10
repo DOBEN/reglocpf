@@ -180,7 +180,7 @@ int RegloCPF::confirm() {
 	char response = _stream->read();
 	int time=0;
 
-	while (response == -1 && time<100000) {  // stream not available
+	while (response == -1 && time<10000) {  // stream not available
 		time++;
 		response = _stream->read();
 	}
