@@ -178,16 +178,21 @@ void RegloCPF::clear_buffer() {
 
 int RegloCPF::confirm() {
 	char response = _stream->read();
+	int time=0;
 
-	while (response == -1) {  // stream not available
+	while (response == -1 && time<100000) {  // stream not available
+		time++;
 		response = _stream->read();
 	}
+
 
 	switch (response) {
 	case RESPONSE_OK:
 		return REGLO_OK;
 	case RESPONSE_ERROR:
 		return REGLO_ERROR;
+	case RESPONSE_TIMEOUT:
+           	return REGLO_TIMEOUT;
 	default:
 		return REGLO_BAD_RESPONSE;
 	}
